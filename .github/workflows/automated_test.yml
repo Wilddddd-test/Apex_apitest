@@ -20,13 +20,19 @@ permissions:
 
 env:
   ALLURE_VERSION: 2.22.1
+  TZ: Asia/Shanghai  # 设置时区环境变量
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
+
+    - name: Set timezone
+      run: |
+        sudo ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+        echo "Asia/Shanghai" | sudo tee /etc/timezone
     
     - name: Set up Python
       uses: actions/setup-python@v4
