@@ -1,0 +1,12 @@
+env:
+  test:
+    base_url: ${APEX_OMNI_HTTP_TEST}
+    network_id: ${NETWORKID_TEST}
+  prod:
+    base_url: ${APEX_OMNI_HTTP_MAIN}
+    network_id: ${NETWORKID_MAIN}
+default_env: prod
+report:
+  title: "Apex API 自动化测试报告"
+  description: "API自动化测试报告"
+  language: zh-CN 

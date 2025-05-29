@@ -1,0 +1,103 @@
+name: Automated API Tests
+
+on: 
+  push:  # 所有分支的推送都触发
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '30 1 * * *'  # 每天 UTC 00:00 运行
+  workflow_dispatch:      # 允许手动触发
+
+# 确保同时只运行一个部署
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  ALLURE_VERSION: 2.22.1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'  # 启用 pip 缓存
+        
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
+        
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache Allure
+      id: cache-allure
+      uses: actions/cache@v3
+      with:
+        path: /opt/allure
+        key: ${{ runner.os }}-allure-${{ env.ALLURE_VERSION }}
+
+    - name: Set up Allure
+      if: steps.cache-allure.outputs.cache-hit != 'true'
+      run: |
+        curl -o allure-${{ env.ALLURE_VERSION }}.tgz -OL https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/${{ env.ALLURE_VERSION }}/allure-commandline-${{ env.ALLURE_VERSION }}.tgz
+        sudo tar -zxvf allure-${{ env.ALLURE_VERSION }}.tgz -C /opt/
+        sudo ln -s /opt/allure-${{ env.ALLURE_VERSION }}/bin/allure /usr/bin/allure
+        rm allure-${{ env.ALLURE_VERSION }}.tgz
+
+    - name: Add Allure to PATH
+      run: |
+        echo "/opt/allure-${{ env.ALLURE_VERSION }}/bin" >> $GITHUB_PATH
+        
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install --upgrade aomaker
+        
+    - name: Run tests
+      env:
+        FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        GITHUB_PAGES_URL: ${{ format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+        # Apex API 凭证
+        APEX_API_KEY: ${{ secrets.APEX_API_KEY }}
+        APEX_API_SECRET: ${{ secrets.APEX_API_SECRET }}
+        APEX_API_PASSPHRASE: ${{ secrets.APEX_API_PASSPHRASE }}
+        # 区块链凭证
+        APEX_SEEDS: ${{ secrets.APEX_SEEDS }}
+        APEX_L2_KEY: ${{ secrets.APEX_L2_KEY }}
+      run: |
+        python run.py
+
+    - name: Prepare reports directory
+      run: |
+        mkdir -p _site/reports
+        mkdir -p _site/allure
+        cp -r reports/aomaker-report.html _site/reports/
+        cp -r reports/html/* _site/allure/
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: _site
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
