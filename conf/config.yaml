@@ -1,11 +1,11 @@
 # 默认使用的环境
-env: test
+env: prod
 
 test: # 测试环境
   base_url: ${APEX_OMNI_HTTP_TEST} # 测试环境地址
   network_id: ${NETWORKID_TEST}
 prod: # 生产环境
-  base_url: ${APEX_OMNI_HTTP_MAIN} # 生产环境地址
+  base_url: https://omni.apex.exchange # 生产环境地址
   network_id: ${NETWORKID_MAIN}
 # 测试报告配置
 report:
