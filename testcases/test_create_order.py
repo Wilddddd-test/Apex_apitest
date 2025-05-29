@@ -21,12 +21,14 @@ class TestOrder:
         with allure.step("创建市价买单"):
             current_time = time.time()
             create_order_res = api_client.create_order_v3(
-                symbol="SOL-USDT",
+                symbol="BTC-USDT",
                 side="BUY",
                 type="MARKET",
-                size="0.3",
+                size="0.001",
                 timestampSeconds=current_time,
-                price="126"
+                price="100000",
+
+
 
             )
             
